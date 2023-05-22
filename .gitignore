@@ -4,12 +4,14 @@ distributed-online-ensemble/weights/
 distributed-online-ensemble/local_weights/
 distributed-online-ensemble/global_weights/
 distributed-online-ensemble/logs/
+distributed-online-ensemble/final_model/*
 
 distributed-online-graphsage/data/*
 distributed-online-graphsage/weights/
 distributed-online-graphsage/local_weights/
 distributed-online-graphsage/global_weights/
 distributed-online-graphsage/logs/
+distributed-online-graphsage/final_model/*
 
 distributed-pre-trained-graphsage/data/*
 distributed-pre-trained-graphsage/models/tgn/data/
@@ -73,6 +75,6 @@ tgn-based-model/logs/
 
 
 datasets/dynamic-datasets/*
-final_model/*
+
 
 results/*
