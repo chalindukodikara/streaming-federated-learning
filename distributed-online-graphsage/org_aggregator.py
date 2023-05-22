@@ -28,10 +28,10 @@ parser.add_argument('--path_edges', type=str, default='./data/', help='Edges Pat
 parser.add_argument('--graph_id', type=int, default=1, help='Graph ID')
 parser.add_argument('--ip', type=str, default='localhost', help='IP')
 parser.add_argument('--port', type=int, default=5150, help='PORT')
-parser.add_argument('--partition_algorithm', type=str, default='hash', help='Partition algorithm')
+parser.add_argument('--partition_algorithm', type=str, default='fennel', help='Partition algorithm')
 
 ######## Frequently configured #######
-parser.add_argument('--dataset_name', type=str, default='wikipedia', help='Dataset name')
+parser.add_argument('--dataset_name', type=str, default='dblp', help='Dataset name')
 parser.add_argument('--partition_size', type=int, default=2, help='Partition size')
 parser.add_argument('--num_orgs', type=int, default=2, help='Number of organizations')
 
@@ -85,13 +85,16 @@ logging.basicConfig(
 )
 ############################################
 # Find the minimum batch number in partitions
-timestamps = []
-for partition in range(PARTITION_SIZE):
-    path = 'data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(partition)
-    files = os.listdir(path)
-    paths = [os.path.join(path, basename) for basename in files]
-    timestamps.append(int(max(paths, key=os.path.getctime).split('/')[-1].split('_')[0]))
-NUM_TIMESTAMPS = min(timestamps)
+min_timestamps = []
+for i in range(NUM_ORGS):
+    timestamps = []
+    for partition in range(PARTITION_SIZE):
+        path = 'data/' + str(i) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(partition)
+        files = os.listdir(path)
+        paths = [os.path.join(path, basename) for basename in files]
+        timestamps.append(int(max(paths, key=os.path.getctime).split('/')[-1].split('_')[0]))
+    min_timestamps.append(min(timestamps))
+NUM_TIMESTAMPS = min(min_timestamps)
 
 class GlobalAggregator:
 
@@ -140,12 +143,19 @@ class GlobalAggregator:
                 msg = self.listeners[i].recv()
                 weights.append(msg[0])
                 num_examples.append(msg[1])
-            avg_weight = sum(weights) / sum(num_examples)
+            # avg_weight = sum(weights) / NUM_ORGS
+            for i in range(NUM_ORGS):
+                if i == 0:
+                    avg_weight = (weights[i] * num_examples[i]) / sum(num_examples)
+                else:
+                    avg_weight += (weights[i] * num_examples[i]) / sum(num_examples)
+
             self.GLOBAL_META_WEIGHTS = avg_weight
             batch_number += 1
-            logging.info("___________________________________________________ Aggregation finished ______________________________________________________")
+            logging.info("############### Aggregation finished ###############")
             for i in range(NUM_ORGS):
-                self.clients[i].send(self.GLOBAL_META_WEIGHTS)
+                self.clients[i].send([self.GLOBAL_META_WEIGHTS, NUM_TIMESTAMPS])
+            logging.info("############### SENT BACK TO ORGS ###############")
 
         accuracy_list = []
         accuracy_std_list = []

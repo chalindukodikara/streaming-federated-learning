@@ -19,17 +19,18 @@ parser.add_argument('--path_weights', type=str, default='./local_weights/', help
 parser.add_argument('--path_nodes', type=str, default='./data/', help='Nodes path')
 parser.add_argument('--path_edges', type=str, default='./data/', help='Edges Path')
 parser.add_argument('--ip', type=str, default='localhost', help='IP')
-parser.add_argument('--port', type=int, default=5000, help='PORT')
-
-######## Frequently configured #######
-parser.add_argument('--dataset_name', type=str, default='wikipedia', help='Dataset name')
-parser.add_argument('--graph_id', type=int, default=1, help='Graph ID')
-parser.add_argument('--partition_id', type=int, default=0, help='Partition ID')
-parser.add_argument('--partition_size', type=int, default=2, help='Partition size')
-parser.add_argument('--organization_id', type=int, default=0, help='Organization ID')
-parser.add_argument('--partition_algorithm', type=str, default='hash', help='Partition algorithm')
+parser.add_argument('--partition_algorithm', type=str, default='fennel', help='Partition algorithm')
 parser.add_argument('--training_epochs', type=int, default=2, help='Initial Training: number of epochs')
 parser.add_argument('--epochs', type=int, default=2, help='Streaming data training for batches: number of epochs')
+parser.add_argument('--graph_id', type=int, default=1, help='Graph ID')
+parser.add_argument('--dataset_name', type=str, default='dblp', help='Dataset name')
+
+######## Frequently configured #######
+parser.add_argument('--port', type=int, default=5000, help='PORT')
+parser.add_argument('--organization_id', type=int, default=0, help='Organization ID')
+parser.add_argument('--partition_id', type=int, default=0, help='Partition ID')
+parser.add_argument('--partition_size', type=int, default=2, help='Partition size')
+
 
 try:
   args = parser.parse_args()
@@ -285,16 +286,17 @@ class Client:
             self.iteration_number += 1
             self.epochs = self.testing_epochs
             # self.client_socket.close()
+            print(self.NUM_TIMESTAMPS)
             if self.iteration_number <= self.NUM_TIMESTAMPS:
-                # edges = pd.read_csv('data/' + str(self.ORG_ID) + '/' + self.dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(self.iteration_number) + '_test_batch_edges.csv')
-                # nodes = pd.read_csv('data/' + str(self.ORG_ID) + '/' + self.dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(self.iteration_number) + '_test_batch_nodes.csv', index_col=0)
+                edges = pd.read_csv('data/' + str(self.ORG_ID) + '/' + self.dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(self.iteration_number) + '_test_batch_edges.csv')
+                nodes = pd.read_csv('data/' + str(self.ORG_ID) + '/' + self.dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(self.iteration_number) + '_test_batch_nodes.csv', index_col=0)
 
-                edges = pd.read_csv(
-                    'data/' + self.dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(
-                        PARTITION_ID) + '/' + str(self.iteration_number) + '_test_batch_edges.csv')
-                nodes = pd.read_csv(
-                    'data/' + self.dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(
-                        PARTITION_ID) + '/' + str(self.iteration_number) + '_test_batch_nodes.csv', index_col=0)
+                # edges = pd.read_csv(
+                #     'data/' + self.dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(
+                #         PARTITION_ID) + '/' + str(self.iteration_number) + '_test_batch_edges.csv')
+                # nodes = pd.read_csv(
+                #     'data/' + self.dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(
+                #         PARTITION_ID) + '/' + str(self.iteration_number) + '_test_batch_nodes.csv', index_col=0)
 
                 logging.info('Batch %s initialized ', str(self.iteration_number))
                 self.MODEL = Model(nodes, edges)
@@ -343,11 +345,11 @@ if __name__ == "__main__":
     logging.info('Client started, graph name %s, graph ID %s, partition ID %s, training epochs %s, epochs %s', DATASET_NAME, GRAPH_ID, PARTITION_ID, TRAINING_EPOCHS, EPOCHS)
 
 
-    # edges = pd.read_csv('data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_edges.csv')
-    # nodes = pd.read_csv('data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_nodes.csv', index_col=0)
+    edges = pd.read_csv('data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_edges.csv')
+    nodes = pd.read_csv('data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_nodes.csv', index_col=0)
 
-    edges = pd.read_csv('data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_edges.csv')
-    nodes = pd.read_csv('data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_nodes.csv', index_col=0)
+    # edges = pd.read_csv('data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_edges.csv')
+    # nodes = pd.read_csv('data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_nodes.csv', index_col=0)
 
     from models.supervised import Model
 

@@ -36,12 +36,11 @@ logging.basicConfig(
 )
 ######## Our parameters ################
 parser = argparse.ArgumentParser('Preprocessing')
-parser.add_argument('--dataset_name', type=str, default='wikipedia', help='Dataset name')
+parser.add_argument('--dataset_name', type=str, default='dblp', help='Dataset name')
 parser.add_argument('--partition_id', type=int, default=1, help='Partition ID')
-parser.add_argument('--organization_id', type=int, default=1, help='Organization ID')
-parser.add_argument('--country', type=int, default='USA', help='Country name or region name')
+parser.add_argument('--country', type=str, default='china', help='Country name or region name')
 parser.add_argument('--partition_size', type=int, default=2, help='Partition size')
-parser.add_argument('--training_batch_size', type=int, default=10, help='Training batch size: can be days, hours, weeks, years')
+parser.add_argument('--training_batch_size', type=int, default=40, help='Training batch size: can be days, hours, weeks, years')
 parser.add_argument('--testing_batch_size', type=int, default=1, help='Testing batch size: can be days, hours, weeks, years')
 
 
@@ -57,7 +56,14 @@ PARTITION_SIZE = args.partition_size
 TRAINING_BATCH_SIZE = args.training_batch_size
 TESTING_BATCH_SIZE = args.testing_batch_size
 COUNTRY = args.country
-ORG_ID = args.organization_id
+
+
+if COUNTRY == 'china':
+    ORG_ID = 0
+elif COUNTRY == 'usa':
+    ORG_ID = 1
+elif COUNTRY == 'germany':
+    ORG_ID = 2
 ######## Our parameters ################
 
 def create_wikipedia(data_edges, data_nodes, training_batch_size, testing_batch_size, initial_timestamp=0, last_timestamp=2678373): # In days: 1 , 10
@@ -315,7 +321,7 @@ def create_dblp(data_edges, data_nodes, training_batch_size, testing_batch_size,
 
 def main(dataset_name, data_edges, data_nodes, initial_timestamp, last_timestamp, training_batch_size = 10, testing_batch_size = 2):
     # create data folder with the dataset name
-    folder_path = "data/" + dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID)
+    folder_path = "data/" + str(ORG_ID) + "/" + dataset_name + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID)
     if os.path.exists(folder_path):
         shutil.rmtree(folder_path)
         os.makedirs(folder_path)
@@ -339,12 +345,13 @@ def main(dataset_name, data_edges, data_nodes, initial_timestamp, last_timestamp
 
 if __name__ == "__main__":
     # read edge list
-    edge_list = pd.read_csv('data/' + DATASET_NAME + '_edges_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '.csv')
+
+    edge_list = pd.read_csv('data/' + DATASET_NAME + "_" + COUNTRY + '_edges_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '.csv')
     if 'Unnamed: 0' in edge_list: edge_list.pop('Unnamed: 0')
     if 'Unnamed: 0.1' in edge_list: edge_list.pop('Unnamed: 0.1')
 
     # read node list
-    node_list = pd.read_csv('data/' + DATASET_NAME + '_nodes_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '.csv')
+    node_list = pd.read_csv('data/' + DATASET_NAME + "_" + COUNTRY + '_nodes_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '.csv')
     if 'Unnamed: 0' in node_list: node_list.pop('Unnamed: 0')
     if 'Unnamed: 0.1' in node_list: node_list.pop('Unnamed: 0.1')
 
@@ -361,6 +368,6 @@ if __name__ == "__main__":
     else:
         edge_list = edge_list.iloc[:, :3]
 
-    logging.info('_____________________________________________________ %s: Pre-processing started _____________________________________________________', DATASET_NAME)
+    logging.info('_____________________________________________________ %s: Pre-processing started, partition size: %s _____________________________________________________', DATASET_NAME, str(PARTITION_ID))
     main(dataset_name=DATASET_NAME, data_edges=edge_list, data_nodes=node_list, initial_timestamp=initial_timestamp, last_timestamp=last_timestamp, training_batch_size=TRAINING_BATCH_SIZE, testing_batch_size=TESTING_BATCH_SIZE)
     logging.info('_____________ %s: Pre-processing finished, training batch size %s, testing batch size %s _____________', DATASET_NAME, TRAINING_BATCH_SIZE, TESTING_BATCH_SIZE)

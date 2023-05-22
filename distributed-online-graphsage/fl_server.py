@@ -13,6 +13,7 @@ import math
 import argparse
 import os
 import glob
+from numpy.random import normal
 from multiprocessing.connection import Client, Listener
 import warnings
 warnings.filterwarnings("ignore")
@@ -23,18 +24,20 @@ parser.add_argument('--path_weights', type=str, default='./local_weights/', help
 parser.add_argument('--path_nodes', type=str, default='./data/', help='Nodes path')
 parser.add_argument('--path_edges', type=str, default='./data/', help='Edges Path')
 parser.add_argument('--ip', type=str, default='localhost', help='IP')
-parser.add_argument('--port', type=int, default=5000, help='PORT')
 parser.add_argument('--graph_id', type=int, default=1, help='Graph ID')
 parser.add_argument('--partition_id', type=int, default=0, help='Partition ID')
-
-######## Frequently configured #######
-parser.add_argument('--dataset_name', type=str, default='wikipedia', help='Dataset name')
-parser.add_argument('--partition_size', type=int, default=2, help='Partition size')
-parser.add_argument('--num_clients', type=int, default=1, help='Number of clients')
-parser.add_argument('--partition_algorithm', type=str, default='hash', help='Partition algorithm')
 parser.add_argument('--training_rounds', type=int, default=2, help='Initial Training: number of rounds')
 parser.add_argument('--rounds', type=int, default=2, help='Streaming data testing for batches: number of rounds')
+parser.add_argument('--partition_algorithm', type=str, default='fennel', help='Partition algorithm')
+parser.add_argument('--dataset_name', type=str, default='dblp', help='Dataset name')
+
+######## Frequently configured #######
+parser.add_argument('--port', type=int, default=5000, help='PORT')
 parser.add_argument('--organization_id', type=int, default=0, help='Organization ID')
+parser.add_argument('--partition_size', type=int, default=2, help='Partition size')
+parser.add_argument('--num_clients', type=int, default=2, help='Number of clients')
+parser.add_argument('--noise', type=bool, default=False, help='Should add noise?') # below 0.01
+parser.add_argument('--noise_variance', type=float, default=0.01, help='Variance of noises') # below 0.01 | 0.005, 0.01, 0.02
 
 
 try:
@@ -57,6 +60,8 @@ TRAINING_ROUNDS = args.training_rounds
 ROUNDS = args.rounds
 NUM_CLIENTS = args.num_clients
 ORGANIZATION_ID = args.organization_id
+VARIANCE = args.noise_variance
+NOISE = args.noise
 ######## Our parameters ################
 
 ######## Setup logger ################
@@ -99,7 +104,7 @@ else:
 # Find the minimum batch number in partitions
 timestamps = []
 for partition in range(PARTITION_SIZE):
-    path = 'data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(partition)
+    path = 'data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(partition)
     files = os.listdir(path)
     paths = [os.path.join(path, basename) for basename in files]
     timestamps.append(int(max(paths, key=os.path.getctime).split('/')[-1].split('_')[0]))
@@ -147,6 +152,7 @@ class Server:
 
         # Global model
         self.GLOBAL_WEIGHTS = MODEL.get_weights()
+        # self.GLOBAL_WEIGHTS = None
 
         address = ('localhost', (7000 + ORGANIZATION_ID * 100))
         while True:
@@ -170,7 +176,6 @@ class Server:
             avg_weight = sum(self.weights) / sum(self.partition_sizes)
             self.weights = []
 
-
             #self.GLOBAL_MODEL.set_weights(new_weights)
             self.GLOBAL_WEIGHTS = avg_weight
 
@@ -178,10 +183,14 @@ class Server:
 
             # Global aggregation
             if self.training_rounds == self.training_cycles:
+                if NOISE:
+                    avg_weight = self.add_noise()
+
                 self.client_org.send([avg_weight, sum(self.partition_sizes)])
 
                 msg = self.listener_org.recv()
-                self.GLOBAL_WEIGHTS = msg
+                self.GLOBAL_WEIGHTS = msg[0]
+                self.num_timestamps = msg[1]
 
             self.partition_sizes = []
 
@@ -198,6 +207,14 @@ class Server:
             elif self.iteration_number == 0:
                 logging.info("____________________________________ Initial training: round %s finished ____________________________________", self.training_cycles)
 
+    def add_noise(self):
+        weights = self.GLOBAL_WEIGHTS
+        for layer in weights:
+            noise = normal(loc=0.0, scale=VARIANCE, size=layer.shape)
+            layer += noise
+        self.GLOBAL_WEIGHTS = weights
+        return weights
+        # model.set_weights(weights)
 
     def send_model(self, client_socket):
 
@@ -448,7 +465,7 @@ class Server:
         logging.info('F1 list: ' + str(f1_list))
         logging.info('Precision list: ' + str(precision_list))
 
-        self.listener_org.send([[round(np.mean(accuracy_list), 4), round(np.mean(accuracy_std_list), 4), round(np.mean(accuracy_99th_list), 4), round(np.mean(accuracy_90th_list), 4)],
+        self.client_org.send([[round(np.mean(accuracy_list), 4), round(np.mean(accuracy_std_list), 4), round(np.mean(accuracy_99th_list), 4), round(np.mean(accuracy_90th_list), 4)],
                                  [round(np.mean(recall_list), 4), round(np.mean(recall_std_list), 4), round(np.mean(recall_99th_list), 4), round(np.mean(recall_90th_list), 4)],
                                  [round(np.mean(auc_list), 4), round(np.mean(auc_std_list), 4), round(np.mean(auc_99th_list), 4), round(np.mean(auc_90th_list), 4)],
                                  [round(np.mean(f1_list), 4), round(np.mean(f1_std_list), 4), round(np.mean(f1_99th_list), 4), round(np.mean(f1_90th_list), 4)],
@@ -465,14 +482,14 @@ if __name__ == "__main__":
     if IP == 'localhost':
         IP = socket.gethostname()
 
-    # edges = pd.read_csv('data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_edges.csv')
-    # nodes = pd.read_csv('data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_nodes.csv', index_col=0)
+    edges = pd.read_csv('data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_edges.csv')
+    nodes = pd.read_csv('data/' + str(ORGANIZATION_ID) + '/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_nodes.csv', index_col=0)
 
-    edges = pd.read_csv('data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_edges.csv')
-    nodes = pd.read_csv('data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_nodes.csv', index_col=0)
+    # edges = pd.read_csv('data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_edges.csv')
+    # nodes = pd.read_csv('data/' + DATASET_NAME + '_' + str(PARTITION_SIZE) + '_' + str(PARTITION_ID) + '/' + str(0) + '_training_batch_nodes.csv', index_col=0)
 
     from models.supervised import Model
-
+    #
     model = Model(nodes, edges)
     model.initialize()
 
@@ -498,6 +515,6 @@ if __name__ == "__main__":
         "##########################################################################################################################################################################################################################")
 
     logging.info('Distributed training done!')
-    logging.info('Training report : Total elapsed time %s seconds, graph ID %s, number of clients %s, training rounds %s, rounds %s, number of timestamps %s', round(elapsed_time, 0), GRAPH_ID, NUM_CLIENTS, TRAINING_ROUNDS, ROUNDS, NUM_TIMESTAMPS)
+    logging.info('Training report : Total elapsed time %s seconds, graph ID %s, number of clients %s, training rounds %s, rounds %s, number of timestamps %s, noise variance %s', round(elapsed_time, 0), GRAPH_ID, NUM_CLIENTS, TRAINING_ROUNDS, ROUNDS, NUM_TIMESTAMPS, VARIANCE)
 
 
