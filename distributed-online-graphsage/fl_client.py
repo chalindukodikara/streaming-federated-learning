@@ -8,8 +8,11 @@ import logging
 from timeit import default_timer as timer
 import time
 import gc
+from stellargraph.layer import MeanAggregator, LinkEmbedding
+from keras.models import load_model
 import argparse
 import os
+import joblib
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -26,7 +29,7 @@ parser.add_argument('--graph_id', type=int, default=1, help='Graph ID')
 parser.add_argument('--dataset_name', type=str, default='dblp', help='Dataset name')
 
 ######## Frequently configured #######
-parser.add_argument('--port', type=int, default=5000, help='PORT')
+parser.add_argument('--port', type=int, default=5200, help='PORT')
 parser.add_argument('--organization_id', type=int, default=0, help='Organization ID')
 parser.add_argument('--partition_id', type=int, default=0, help='Partition ID')
 parser.add_argument('--partition_size', type=int, default=2, help='Partition size')
@@ -184,7 +187,7 @@ class Client:
                 if self.iteration_number > 0 and self.rounds == 0:
                     self.MODEL.set_weights(self.GLOBAL_WEIGHTS)
                     if self.iteration_number == 1:
-                        logging.info('################################## Next batch processing started: transfer learning is ON ##################################')
+                        logging.info('################################## Next batch processing started: incremental learning is ON ##################################')
                 else:
                     read_sockets, _, exception_sockets = select.select([self.client_socket], [], [self.client_socket])
 
@@ -334,6 +337,25 @@ class Client:
         data = pickle.dumps(data)
         data = bytes(f"{len(data):<{self.HEADER_LENGTH}}", 'utf-8') + data
         self.client_socket.sendall(data)
+
+        if PARTITION_ID == 0 and ORGANIZATION_ID == 0:
+            joblib.dump(self.MODEL.model, 'final_model/' + str(time.strftime('%m %d %H:%M:%S')) + ' final_model.pkl')
+            np.save('final_model/' + str(time.strftime('%m %d %H:%M:%S')) + ' final_model_weights.npy', self.MODEL.get_weights()) # save the weights only
+            self.MODEL.model.save('final_model/' + str(time.strftime('%m %d %H:%M:%S')) + ' final_model_h5.h5') # save the model architecture including weights
+            # x = load_model('final_model/f2.h5',custom_objects={'MeanAggregator': MeanAggregator, 'LinkEmbedding': LinkEmbedding})
+
+            # model = joblib.load('final_model/final_model.pkl')
+            # weights = np.load('final_model/final_model_weights.npy', allow_pickle=True)
+            # self.MODEL.set_weights(weights)
+            # model = load_model('final_model/final_model.pkl', custom_objects={'MeanAggregator': MeanAggregator})
+            # self.MODEL.model.save('final_model/f2.h5')
+
+            # x = load_model('final_model/f2.h5', custom_objects={'MeanAggregator': MeanAggregator, 'LinkEmbedding':LinkEmbedding})
+            # self.MODEL.model = x
+            # print(self.MODEL.get_weights())
+
+
+
 
 if __name__ == "__main__":
 

@@ -27,7 +27,7 @@ parser.add_argument('--path_nodes', type=str, default='./data/', help='Nodes pat
 parser.add_argument('--path_edges', type=str, default='./data/', help='Edges Path')
 parser.add_argument('--graph_id', type=int, default=1, help='Graph ID')
 parser.add_argument('--ip', type=str, default='localhost', help='IP')
-parser.add_argument('--port', type=int, default=5150, help='PORT')
+parser.add_argument('--port', type=int, default=5250, help='PORT')
 parser.add_argument('--partition_algorithm', type=str, default='fennel', help='Partition algorithm')
 
 ######## Frequently configured #######
@@ -59,6 +59,13 @@ if os.path.exists(folder_path_agg):
     pass
 else:
     os.makedirs(folder_path_agg)
+
+folder_path_final = "final_model"
+if os.path.exists(folder_path_final):
+    pass
+else:
+    os.makedirs(folder_path_final)
+
 
 ######## Setup logger ################
 # create data folder with the dataset name

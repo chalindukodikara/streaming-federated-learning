@@ -32,7 +32,7 @@ parser.add_argument('--partition_algorithm', type=str, default='fennel', help='P
 parser.add_argument('--dataset_name', type=str, default='dblp', help='Dataset name')
 
 ######## Frequently configured #######
-parser.add_argument('--port', type=int, default=5000, help='PORT')
+parser.add_argument('--port', type=int, default=5200, help='PORT')
 parser.add_argument('--organization_id', type=int, default=0, help='Organization ID')
 parser.add_argument('--partition_size', type=int, default=2, help='Partition size')
 parser.add_argument('--num_clients', type=int, default=2, help='Number of clients')

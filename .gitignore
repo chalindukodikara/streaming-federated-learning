@@ -73,5 +73,6 @@ tgn-based-model/logs/
 
 
 datasets/dynamic-datasets/*
+final_model/*
 
 results/*
