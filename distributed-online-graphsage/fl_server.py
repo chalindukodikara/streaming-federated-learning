@@ -82,7 +82,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s : [%(levelname)s]  %(message)s',
     handlers=[
-        logging.FileHandler('logs/server/{}_{}_{}_partition_{}.log'.format(str(time.strftime('%m %d %H:%M:%S # %l:%M%p on %b %d, %Y')), DATASET_NAME, PARTITION_ALGORITHM, PARTITION_SIZE)),
+        logging.FileHandler('logs/server/{}_{}_{}_{}_partition_{}.log'.format(str(time.strftime('%m %d %H:%M:%S # %l:%M%p on %b %d, %Y')), ORGANIZATION_ID, DATASET_NAME, PARTITION_ALGORITHM, PARTITION_SIZE)),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -515,6 +515,6 @@ if __name__ == "__main__":
         "##########################################################################################################################################################################################################################")
 
     logging.info('Distributed training done!')
-    logging.info('Training report : Total elapsed time %s seconds, graph ID %s, number of clients %s, training rounds %s, rounds %s, number of timestamps %s, noise variance %s', round(elapsed_time, 0), GRAPH_ID, NUM_CLIENTS, TRAINING_ROUNDS, ROUNDS, NUM_TIMESTAMPS, VARIANCE)
+    logging.info('Training report : Total elapsed time %s seconds, graph ID %s, number of clients %s, training rounds %s, rounds %s, number of timestamps %s, noise variance %s, noise %s', round(elapsed_time, 0), GRAPH_ID, NUM_CLIENTS, TRAINING_ROUNDS, ROUNDS, NUM_TIMESTAMPS, VARIANCE, NOISE)
 
 

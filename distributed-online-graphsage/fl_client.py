@@ -74,7 +74,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s : [%(levelname)s]  %(message)s',
     handlers=[
-        logging.FileHandler('logs/client/{}_{}_{}_partition_{}_client_{}.log'.format(str(time.strftime('%m %d %H:%M:%S # %l:%M%p on %b %d, %Y')), DATASET_NAME, PARTITION_ALGORITHM, PARTITION_SIZE, PARTITION_ID)),
+        logging.FileHandler('logs/client/{}_{}_{}_{}_partition_{}_client_{}.log'.format(str(time.strftime('%m %d %H:%M:%S # %l:%M%p on %b %d, %Y')), ORGANIZATION_ID, DATASET_NAME, PARTITION_ALGORITHM, PARTITION_SIZE, PARTITION_ID)),
         logging.StreamHandler(sys.stdout)
     ]
 )
